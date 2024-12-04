@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<html lang="ko-KR">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Payment Page</title>
+    <script src="https://cdn.iamport.kr/v1/iamport.js"></script>
+</head>
+<body>
+<h1>Payment Page</h1>
+<form id="paymentForm">
+    <table>
+        <tr>
+            <td><input type="hidden" id="channelKey" value="channel-key-9ce74cad-10dd-4708-8a66-a9cbe97d0a45"></td>
+        </tr>
+        <tr>
+            <td>결제 주문서 번호:</td>
+            <td><input type= "text" id="merchantUid" value="" disabled></td>
+        </tr>
+        <tr>
+            <td>지불 방식:</td>
+            <td><input id="payMethod" value="card"></td>
+        </tr>
+        <tr>
+            <td>상품명:</td>
+            <td><input id="name" value="포트원 결제 테스트"></td>
+        </tr>
+        <tr>
+            <td>결제금액:</td>
+            <td><input id="amount" value="100"></td>
+        </tr>
+        <tr>
+            <td>구매자ID:</td>
+            <td><input id="buyerId" value="123456789" disabled></td>
+        </tr>
+        <tr>
+            <td><input type="hidden" id="buyerEmail" value="chjang5621@naver.com"></td>
+        </tr>
+        <tr>
+            <td><input type="hidden" id="buyerName" value="장혜리"></td>
+        </tr>
+        <tr>
+            <td><input type="hidden" id="buyerTel" value="010-1234-5678"></td>
+        </tr>
+        <tr>
+            <td><input type="hidden" id="buyerAddr" value="서울특별시 강남구 신사동"></td>
+        </tr>
+        <tr>
+            <td><input type="hidden" id="buyerPostcode" value="01181"></td>
+        </tr>
+        <tr>
+            <td><input type="hidden" id="mRedirectUrl" value="http://localhost:8080/payment-redirect"></td>
+        </tr>
+    </table>
+</form>
+<button onclick="requestSave()">주문서 저장</button>
+
+<button onclick="requestPay()">결제 하기</button>
+
+<script>
+
+    //merchant_uid 생성
+    const merchantUid = `${crypto.randomUUID()}`;
+    document.getElementById('merchantUid').value = merchantUid;
+
+    // === 결제 요청 함수 ===
+    function requestPay() {
+        IMP.init('imp15046061'); // 가맹점 식별코드
+
+        const form = document.getElementById('paymentForm');
+        IMP.request_pay(
+            {
+                channelKey: form.channelKey.value,
+                pay_method: form.payMethod.value,
+                merchant_uid: form.merchantUid.value,
+                name: form.name.value,
+                amount: form.amount.value,
+                buyer_email: form.buyerEmail.value,
+                buyer_name: form.buyerName.value,
+                buyer_tel: form.buyerTel.value,
+                buyer_addr: form.buyerAddr.value,
+                buyer_postcode: form.buyerPostcode.value,
+                m_redirect_url: form.mRedirectUrl.value,
+            },
+            async (response) => {
+                if (response.error_code != null) {
+                    return alert(`결제에 실패하였습니다. 에러 내용: ${response.error_msg}`);
+                }
+
+                console.log(response);
+
+                // 고객사 서버에서 엔드포인트를 구현해야 합니다.
+                const SERVER_BASE_URL = "http://localhost:8080"; // FIXME
+                const notified = await fetch(`${SERVER_BASE_URL}/api/v1/payment/complete`, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    // imp_uid와 merchant_uid, 주문 정보를 서버에 전달합니다
+                    body: JSON.stringify({
+                        imp_uid: response.imp_uid,
+                        merchant_uid: response.merchant_uid,
+                        // 주문 정보...
+                    }),
+                });
+            },
+        );
+    }
+
+    function requestSave() {
+        const form = document.getElementById('paymentForm');
+        const merchantUid = form.merchantUid.value;
+
+        const SERVER_BASE_URL = "http://localhost:8080"; // FIXME
+        fetch(`${SERVER_BASE_URL}/api/v1/payment-order`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                merchant_uid: merchantUid,
+                name: form.name.value,
+                amount: form.amount.value,
+                buyer_id: form.buyerId.value
+            }),
+        });
+    }
+</script>
+</body>
+</html>
