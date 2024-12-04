@@ -1,8 +1,8 @@
 package com.example.simple_payment_system.service;
 
 import com.example.simple_payment_system.PaymentOrderRepository;
-import com.example.simple_payment_system.domain.order.PaymentOrder;
-import com.example.simple_payment_system.domain.order.PaymentOrderStatus;
+import com.example.simple_payment_system.domain.payment.order.PaymentOrder;
+import com.example.simple_payment_system.domain.payment.order.PaymentOrderStatus;
 import com.example.simple_payment_system.dto.PaymentOrderSaveRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,6 +25,7 @@ public class PaymentOrderService {
             .amount(request.getAmount())
             .merchantUid(request.getMerchantUid())
             .buyerId(request.getBuyerId())
+            .payMethod(request.getPayMethod())
             .status(PaymentOrderStatus.RESERVED)
             .build();
 

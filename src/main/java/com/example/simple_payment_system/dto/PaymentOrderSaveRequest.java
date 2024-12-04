@@ -16,4 +16,5 @@ public class PaymentOrderSaveRequest {
     private String name;
     private BigDecimal amount;
     private Long buyerId;
+    private String payMethod;
 }

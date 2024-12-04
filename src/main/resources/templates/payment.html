@@ -12,11 +12,11 @@
 <form id="paymentForm">
     <table>
         <tr>
-            <td><input type="hidden" id="channelKey" value="channel-key-9ce74cad-10dd-4708-8a66-a9cbe97d0a45"></td>
+            <td><input id="channelKey" type="hidden" value="channel-key-9ce74cad-10dd-4708-8a66-a9cbe97d0a45"></td>
         </tr>
         <tr>
             <td>결제 주문서 번호:</td>
-            <td><input type= "text" id="merchantUid" value="" disabled></td>
+            <td><input disabled id="merchantUid" type="text" value=""></td>
         </tr>
         <tr>
             <td>지불 방식:</td>
@@ -32,25 +32,25 @@
         </tr>
         <tr>
             <td>구매자ID:</td>
-            <td><input id="buyerId" value="123456789" disabled></td>
+            <td><input disabled id="buyerId" value="123456789"></td>
         </tr>
         <tr>
-            <td><input type="hidden" id="buyerEmail" value="chjang5621@naver.com"></td>
+            <td><input id="buyerEmail" type="hidden" value="chjang5621@naver.com"></td>
         </tr>
         <tr>
-            <td><input type="hidden" id="buyerName" value="장혜리"></td>
+            <td><input id="buyerName" type="hidden" value="장혜리"></td>
         </tr>
         <tr>
-            <td><input type="hidden" id="buyerTel" value="010-1234-5678"></td>
+            <td><input id="buyerTel" type="hidden" value="010-1234-5678"></td>
         </tr>
         <tr>
-            <td><input type="hidden" id="buyerAddr" value="서울특별시 강남구 신사동"></td>
+            <td><input id="buyerAddr" type="hidden" value="서울특별시 강남구 신사동"></td>
         </tr>
         <tr>
-            <td><input type="hidden" id="buyerPostcode" value="01181"></td>
+            <td><input id="buyerPostcode" type="hidden" value="01181"></td>
         </tr>
         <tr>
-            <td><input type="hidden" id="mRedirectUrl" value="http://localhost:8080/payment-redirect"></td>
+            <td><input id="mRedirectUrl" type="hidden" value="http://localhost:8080/payment-redirect"></td>
         </tr>
     </table>
 </form>
@@ -89,7 +89,6 @@
                 }
 
                 console.log(response);
-
                 // 고객사 서버에서 엔드포인트를 구현해야 합니다.
                 const SERVER_BASE_URL = "http://localhost:8080"; // FIXME
                 const notified = await fetch(`${SERVER_BASE_URL}/api/v1/payment/complete`, {
@@ -118,7 +117,8 @@
                 merchant_uid: merchantUid,
                 name: form.name.value,
                 amount: form.amount.value,
-                buyer_id: form.buyerId.value
+                buyer_id: form.buyerId.value,
+                pay_method: form.payMethod.value
             }),
         });
     }

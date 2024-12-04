@@ -31,8 +31,9 @@ public class PaymentController {
 
     // 결제 완료 처리
     @PostMapping("/api/v1/payment/complete")
-    public void complete(@RequestBody PaymentOrderUpdateRequest paymentOrderUpdateRequest) {
+    public ResponseEntity<Void> complete(@RequestBody PaymentOrderUpdateRequest paymentOrderUpdateRequest) {
         paymentService.complete(paymentOrderUpdateRequest);
+        return ResponseEntity.ok().build();
     }
 
     // Access Token 발급

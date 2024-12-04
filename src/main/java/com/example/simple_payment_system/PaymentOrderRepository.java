@@ -1,6 +1,6 @@
 package com.example.simple_payment_system;
 
-import com.example.simple_payment_system.domain.order.PaymentOrder;
+import com.example.simple_payment_system.domain.payment.order.PaymentOrder;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

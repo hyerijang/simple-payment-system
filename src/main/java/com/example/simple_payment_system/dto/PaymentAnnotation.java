@@ -1,0 +1,61 @@
+package com.example.simple_payment_system.dto;
+
+import java.math.BigDecimal;
+import java.util.List;
+import lombok.Data;
+
+@Data
+public class PaymentAnnotation {
+    private String impUid;
+    private String merchantUid;
+    private String payMethod;
+    private String channel;
+    private String pgProvider;
+    private String embPgProvider;
+    private String pgTid;
+    private String pgId;
+    private Boolean escrow;
+    private String applyNum;
+    private String bankCode;
+    private String bankName;
+    private String cardCode;
+    private String cardName;
+    private String cardIssuerCode;
+    private String cardIssuerName;
+    private String cardPublisherCode;
+    private String cardPublisherName;
+    private Integer cardQuota;
+    private String cardNumber;
+    private Integer cardType;
+    private String vbankCode;
+    private String vbankName;
+    private String vbankNum;
+    private String vbankHolder;
+    private Integer vbankDate;
+    private Integer vbankIssuedAt;
+    private String name;
+    private BigDecimal amount;
+    private BigDecimal cancelAmount;
+    private String currency;
+    private String buyerName;
+    private String buyerEmail;
+    private String buyerTel;
+    private String buyerAddr;
+    private String buyerPostcode;
+    private String customData;
+    private String userAgent;
+    private String status;
+    private Integer startedAt;
+    private Integer paidAt;
+    private Integer failedAt;
+    private Integer cancelledAt;
+    private String failReason;
+    private String cancelReason;
+    private String receiptUrl;
+    private List<PaymentCancelAnnotation> cancelHistory;
+    private List<String> cancelReceiptUrls;
+    private Boolean cashReceiptIssued;
+    private String customerUid;
+    private String customerUidUsage;
+    private Object promotion;
+}
