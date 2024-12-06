@@ -2,6 +2,7 @@ package com.example.simple_payment_system.service;
 
 import com.example.simple_payment_system.common.PaymentToken;
 import com.example.simple_payment_system.dto.Response;
+import java.math.BigDecimal;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -46,6 +47,35 @@ public class PortOneService {
             .bodyToMono(Response.class)
             .blockOptional()
             .orElseThrow(() -> new RuntimeException("PortOne : valid payment not found"));
+
+    }
+
+    public Response canclePayment(String impUid, BigDecimal cancelRequestAmount, String reason, String accessToken) {
+        String cancelUrl = "https://api.iamport.kr/payments/cancel";
+        Map<String, Object> requestData = Map.of(
+            "reason", reason,
+            "imp_uid", impUid,
+            "amount", cancelRequestAmount,
+            "checksum", cancelRequestAmount // Assuming cancelableAmount is the same as cancelRequestAmount
+        );
+
+        webClient.post()
+            .uri(cancelUrl)
+            .header(HttpHeaders.AUTHORIZATION, accessToken)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(requestData)
+            .retrieve()
+            .onStatus(
+                status -> status.is5xxServerError(),
+                clientResponse -> Mono.error(new RuntimeException("PortOne : Server error occurred"))
+            )
+            .onStatus(
+                status -> status.is4xxClientError(),
+                clientResponse -> Mono.error(new RuntimeException("PortOne : Client error occurred"))
+            )
+            .bodyToMono(Response.class)
+            .blockOptional()
+            .orElseThrow(() -> new RuntimeException("PortOne : cancel payment failed"));
 
     }
 }

@@ -1,5 +1,6 @@
 package com.example.simple_payment_system.controller;
 
+import com.example.simple_payment_system.dto.PaymentOrderCancelRequest;
 import com.example.simple_payment_system.dto.PaymentOrderUpdateRequest;
 import com.example.simple_payment_system.dto.PaymentWebhookRequest;
 import com.example.simple_payment_system.service.PaymentService;
@@ -45,10 +46,18 @@ public class PaymentController {
         return ResponseEntity.ok().build();
     }
 
-    //
+    // 웹훅 처리
     @PostMapping("/api/v1/portone-webhook")
     public ResponseEntity<Void> portoneWebhook(@RequestBody PaymentWebhookRequest webhookRequest) {
         paymentService.portoneWebhook(webhookRequest);
+        return ResponseEntity.ok().build();
+    }
+
+
+    // 결제 취소 처리
+    @PostMapping("/api/v1/payment/cancel")
+    public ResponseEntity<Void> cancel(@RequestBody PaymentOrderCancelRequest orderCancelRequest) {
+        paymentService.cancel(orderCancelRequest);
         return ResponseEntity.ok().build();
     }
 

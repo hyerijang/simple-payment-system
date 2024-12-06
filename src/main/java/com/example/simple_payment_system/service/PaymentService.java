@@ -3,6 +3,7 @@ package com.example.simple_payment_system.service;
 import com.example.simple_payment_system.PaymentRepository;
 import com.example.simple_payment_system.domain.payment.order.PaymentOrder;
 import com.example.simple_payment_system.domain.payment.order.PaymentOrderStatus;
+import com.example.simple_payment_system.dto.PaymentOrderCancelRequest;
 import com.example.simple_payment_system.dto.PaymentOrderUpdateRequest;
 import com.example.simple_payment_system.dto.PaymentWebhookRequest;
 import com.example.simple_payment_system.dto.Response;
@@ -101,7 +102,6 @@ public class PaymentService {
         return amount.compareTo(amountToBePaid) == 0;
     }
 
-
     @Transactional
     public void portoneWebhook(PaymentWebhookRequest request) {
         try {
@@ -111,5 +111,34 @@ public class PaymentService {
             log.error("결제 검증 실패 merchantUid = {} , {}", request.getMerchantUid(), e);
             throw new RuntimeException("Payment verification failed", e);
         }
+    }
+
+    @Transactional
+    public void cancel(PaymentOrderCancelRequest request) {
+        // 1. 포트원 API 엑세스 토큰 발급
+        String accessToken = portOneService.getAccessToken().block();
+
+        // 2. 환불 가능 금액(= 결제금액 - 환불 된 총 금액) 계산
+        PaymentOrder paymentOrder = paymentOrderService.findByMerchantUid(request.getMerchantUid());
+        BigDecimal cancelableAmount = paymentOrder.getAmount().subtract(request.getCancelRequestAmount());
+        if (cancelableAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new RuntimeException("이미 전액환불된 주문입니다.");
+        }
+        // 3. 포트원 REST API로 결제환불 요청
+        Response response = portOneService.canclePayment(request.getImpUid(), request.getCancelRequestAmount(),
+            request.getReason(), accessToken);
+        // 4. 고객사 내부 주문 데이터에 취소 결과 반영
+        if (PaymentOrderStatus.valueOf(response.getResponse().getStatus()) == PaymentOrderStatus.CANCELLED) {
+            // 취소 되었으면 db에 반영
+            paymentOrder.setStatus(PaymentOrderStatus.CANCELLED);
+            paymentOrder.setCancelAmount(response.getResponse().getCancelAmount());
+            paymentOrder.setCancelReason(response.getResponse().getCancelReason());
+            paymentOrder.setCancelAmount(response.getResponse().getCancelAmount());
+            paymentOrder.setCancelledAt(response.getResponse().getCancelledAt());
+            return;
+        } else {
+            throw new RuntimeException("Payment cancel failed");
+        }
+
     }
 }
