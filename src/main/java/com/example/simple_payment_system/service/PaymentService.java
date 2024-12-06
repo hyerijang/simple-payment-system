@@ -5,6 +5,7 @@ import com.example.simple_payment_system.common.PaymentToken;
 import com.example.simple_payment_system.domain.payment.order.PaymentOrder;
 import com.example.simple_payment_system.domain.payment.order.PaymentOrderStatus;
 import com.example.simple_payment_system.dto.PaymentOrderUpdateRequest;
+import com.example.simple_payment_system.dto.PaymentWebhookRequest;
 import com.example.simple_payment_system.dto.Response;
 import java.math.BigDecimal;
 import java.util.Map;
@@ -126,4 +127,14 @@ public class PaymentService {
             .map(response -> (String) ((Map) response.get("response")).get("access_token"));
     }
 
+    @Transactional
+    public void portoneWebhook(PaymentWebhookRequest request) {
+        try {
+            verifyPayment(request.getImpUid(), request.getMerchantUid());
+        } catch (Exception e) {
+            // 결제 검증에 실패했습니다.
+            log.error("결제 검증 실패 merchantUid = {} , {}", request.getMerchantUid(), e);
+            throw new RuntimeException("Payment verification failed", e);
+        }
+    }
 }

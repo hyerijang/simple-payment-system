@@ -1,6 +1,7 @@
 package com.example.simple_payment_system.controller;
 
 import com.example.simple_payment_system.dto.PaymentOrderUpdateRequest;
+import com.example.simple_payment_system.dto.PaymentWebhookRequest;
 import com.example.simple_payment_system.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,5 +44,13 @@ public class PaymentController {
         log.info("Access Token = {}", accessToken);
         return ResponseEntity.ok().build();
     }
+
+    //
+    @PostMapping("/api/v1/portone-webhook")
+    public ResponseEntity<Void> portoneWebhook(@RequestBody PaymentWebhookRequest webhookRequest) {
+        paymentService.portoneWebhook(webhookRequest);
+        return ResponseEntity.ok().build();
+    }
+
 
 }

@@ -52,4 +52,21 @@ public class PaymentOrder extends BaseEntity {  // Payment Order(지급지시서
     @Enumerated(EnumType.STRING)
     private PaymentOrderStatus status; // 지급지시서 상태
 
+    // 가상계좌
+    private String vbankCode; // 가상 계좌 은행 표쥰코드
+    private String vbankName; // 가상 계좌 은행명
+    private String vbankNum; // 고정 가상 계좌 번호
+    private String vbankHolder; // 가상 계좌 예금주
+    private Integer vbankDate; // 가상 계좌 입금 기한
+
+    // 가상계좌 업데이트 하는 함수
+    public void updateVbank(String vbankCode, String vbankName, String vbankNum, String vbankHolder,
+                            Integer vbankDate) {
+        this.vbankCode = vbankCode;
+        this.vbankName = vbankName;
+        this.vbankNum = vbankNum;
+        this.vbankHolder = vbankHolder;
+        this.vbankDate = vbankDate;
+    }
+
 }
