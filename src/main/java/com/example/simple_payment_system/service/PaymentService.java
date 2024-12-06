@@ -29,47 +29,7 @@ public class PaymentService {
     @Transactional
     public void complete(PaymentOrderUpdateRequest result) {
         try {
-            String impUid = result.getImpUid();
-            String merchantUid = result.getMerchantUid();
-
-            // 1. 포트원 API 엑세스 토큰 발급
-            String accessToken = getAccessToken().block();
-
-            // 2. 포트원 결제내역 단건조회 API 호출
-            Response payment = getPayment(impUid, accessToken).block();
-            if (payment == null || payment.getResponse() == null) {
-                log.warn("포트원 결제 내역 조회 실패: merchantUid = {}", merchantUid);
-                throw new RuntimeException("포트원 결제 내역 조회 실패");
-            }
-
-            // 3. 고객사 내부 주문 데이터의 가격과 실제 지불된 금액을 비교합니다.
-            PaymentOrder paymentOrder = paymentOrderService.findByMerchantUid(merchantUid);
-
-            if (isAmountEqual(paymentOrder.getAmount(), payment.getResponse().getAmount())) {
-                String status = payment.getResponse().getStatus();
-                switch (status) {
-                    case "ready":
-                        // 가상 계좌가 발급된 상태입니다.
-                        // 계좌 정보를 이용해 원하는 로직을 구성하세요.
-                        log.info("가상 계좌 발급 merchantUid = {}", merchantUid);
-                        break;
-                    case "paid":
-                        // 모든 금액을 지불했습니다! 완료 시 원하는 로직을 구성하세요.
-                        log.info("지불 성공 merchantUid = {}", merchantUid);
-                        paymentOrder.setStatus(PaymentOrderStatus.PAID);
-                        break;
-                    default:
-                        // 결제가 실패했습니다. 원인을 파악하여 처리하세요.
-                        log.warn("결제 실패 merchantUid = {}", merchantUid);
-                        paymentOrder.setStatus(PaymentOrderStatus.FAILED);
-                        throw new RuntimeException("Payment failed");
-                }
-            } else {
-                // 결제 금액이 불일치하여 위/변조 시도가 의심됩니다.
-                log.warn("결제 금액 불일치 merchantUid = {}, ({}, {})", merchantUid, payment.getResponse().getAmount(),
-                    paymentOrder.getAmount());
-                throw new RuntimeException("Payment amount mismatch");
-            }
+            verifyPayment(result.getImpUid(), result.getMerchantUid());
         } catch (Exception e) {
             // 결제 검증에 실패했습니다.
             log.error("결제 검증 실패 merchantUid = {} , {}", result.getMerchantUid(), e);
@@ -77,17 +37,81 @@ public class PaymentService {
         }
     }
 
-    private boolean isAmountEqual(BigDecimal orderAmount, BigDecimal responseAmount) {
-        return orderAmount.compareTo(responseAmount) == 0;
+    private void verifyPayment(String impUid, String merchantUid) {
+
+        // 1. 포트원 API 엑세스 토큰 발급
+        String accessToken = getAccessToken().block();
+
+        // 2. 포트원 결제내역 단건조회 API 호출
+        Response payment = getPayment(impUid, accessToken);
+
+        // 3. 고객사 내부 주문 데이터의 가격과 실제 지불된 금액을 비교합니다.
+        PaymentOrder paymentOrder = paymentOrderService.findByMerchantUid(merchantUid);
+        BigDecimal amount = payment.getResponse().getAmount(); // 실제 결제 된 금액
+        BigDecimal amountToBePaid = paymentOrder.getAmount(); // 결제 되어야하는 금액
+        if (isAmountEqual(amount, amountToBePaid)) {
+            handlePaymentStatus(payment, paymentOrder);
+        } else {
+            log.warn("결제 금액 불일치 merchantUid = {} , amount = {} , amountToBePaid = {}", merchantUid, amount,
+                amountToBePaid);
+            throw new RuntimeException("위조된 결제 시도");
+        }
     }
 
-    private Mono<Response> getPayment(String impUid, String accessToken) {
+    private void handlePaymentStatus(Response payment, PaymentOrder paymentOrder) {
+        String status = payment.getResponse().getStatus();
+        String merchantUid = payment.getResponse().getMerchantUid();
+        switch (status) {
+            case "ready":
+                // 가상 계좌가 발급된 상태입니다.
+                // 계좌 정보를 이용해 원하는 로직을 구성하세요.
+                log.info("가상 계좌 발급 merchantUid = {}", merchantUid);
+                paymentOrder.setStatus(PaymentOrderStatus.READY);
+                // DB에 가상계좌 발급 정보 저장
+                String vbankName = payment.getResponse().getVbankName();
+                String vbankNum = payment.getResponse().getVbankNum();
+                String vbankHolder = payment.getResponse().getVbankHolder();
+                String vbankCode = payment.getResponse().getVbankCode();
+                Integer vbankDate = payment.getResponse().getVbankDate();
+                paymentOrder.updateVbank(vbankCode, vbankName, vbankNum, vbankHolder, vbankDate);
+                //TODO : 가상 계좌 발급 안내 문자메세지 발송
+                break;
+            case "paid":
+                // 모든 금액을 지불했습니다! 완료 시 원하는 로직을 구성하세요.
+                log.info("지불 성공 merchantUid = {}", merchantUid);
+                paymentOrder.setStatus(PaymentOrderStatus.PAID);
+                break;
+            default:
+                // 결제가 실패했습니다. 원인을 파악하여 처리하세요.
+                log.warn("결제 실패 merchantUid = {}", merchantUid);
+                paymentOrder.setStatus(PaymentOrderStatus.FAILED);
+                throw new RuntimeException("Payment failed");
+        }
+    }
+
+    private boolean isAmountEqual(BigDecimal amount, BigDecimal amountToBePaid) {
+        //결제 된 금액 === 결제 되어야 하는 금액
+        return amount.compareTo(amountToBePaid) == 0;
+    }
+
+    private Response getPayment(String impUid, String accessToken) {
         String paymentUrl = "https://api.iamport.kr/payments/" + impUid;
         return webClient.get()
             .uri(paymentUrl)
             .header(HttpHeaders.AUTHORIZATION, accessToken)
             .retrieve()
-            .bodyToMono(Response.class);
+            .onStatus(
+                status -> status.is5xxServerError(),
+                clientResponse -> Mono.error(new RuntimeException("PortOne : Server error occurred"))
+            )
+            .onStatus(
+                status -> status.is4xxClientError(),
+                clientResponse -> Mono.error(new RuntimeException("PortOne : Client error occurred"))
+            )
+            .bodyToMono(Response.class)
+            .blockOptional()
+            .orElseThrow(() -> new RuntimeException("PortOne : valid payment not found"));
+
     }
 
     public Mono<String> getAccessToken() {
