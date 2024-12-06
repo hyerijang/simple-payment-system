@@ -1,6 +1,7 @@
 package com.example.simple_payment_system.domain.payment.order;
 
 import com.example.simple_payment_system.common.BaseEntity;
+import com.example.simple_payment_system.dto.VbankInfo;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -60,13 +61,12 @@ public class PaymentOrder extends BaseEntity {  // Payment Order(지급지시서
     private Integer vbankDate; // 가상 계좌 입금 기한
 
     // 가상계좌 업데이트 하는 함수
-    public void updateVbank(String vbankCode, String vbankName, String vbankNum, String vbankHolder,
-                            Integer vbankDate) {
-        this.vbankCode = vbankCode;
-        this.vbankName = vbankName;
-        this.vbankNum = vbankNum;
-        this.vbankHolder = vbankHolder;
-        this.vbankDate = vbankDate;
+    public void updateVbank(VbankInfo vbankInfo) {
+        this.vbankCode = vbankInfo.getVbankCode();
+        this.vbankName = vbankInfo.getVbankName();
+        this.vbankNum = vbankInfo.getVbankNum();
+        this.vbankHolder = vbankInfo.getVbankHolder();
+        this.vbankDate = vbankInfo.getVbankDate();
     }
 
 }
