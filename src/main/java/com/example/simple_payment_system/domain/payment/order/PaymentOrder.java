@@ -1,9 +1,8 @@
 package com.example.simple_payment_system.domain.payment.order;
 
 import com.example.simple_payment_system.common.BaseEntity;
-import com.example.simple_payment_system.dto.PaymentCancelAnnotation;
-import com.example.simple_payment_system.dto.VbankInfo;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -13,9 +12,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
-import java.time.DateTimeException;
-import java.time.LocalDateTime;
-import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,7 +27,8 @@ import lombok.NoArgsConstructor;
     indexes = {
         @Index(name = "idx_merchant_uid", columnList = "merchantUid")
     })
-public class PaymentOrder extends BaseEntity {  // Payment Order(지급지시서)
+public class PaymentOrder extends BaseEntity {
+    // Payment Order(지급지시서) 엔티티
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -56,23 +53,15 @@ public class PaymentOrder extends BaseEntity {  // Payment Order(지급지시서
     private PaymentOrderStatus status; // 지급지시서 상태
 
     // === 가상계좌 === //
-    private String vbankCode; // 가상 계좌 은행 표쥰코드
-    private String vbankName; // 가상 계좌 은행명
-    private String vbankNum; // 고정 가상 계좌 번호
-    private String vbankHolder; // 가상 계좌 예금주
-    private Integer vbankDate; // 가상 계좌 입금 기한
+    @Embedded
+    private VbankInfo vbankInfo;
 
     // 가상계좌 업데이트 하는 함수
     public void updateVbank(VbankInfo vbankInfo) {
-        this.vbankCode = vbankInfo.getVbankCode();
-        this.vbankName = vbankInfo.getVbankName();
-        this.vbankNum = vbankInfo.getVbankNum();
-        this.vbankHolder = vbankInfo.getVbankHolder();
-        this.vbankDate = vbankInfo.getVbankDate();
+        this.vbankInfo = vbankInfo;
     }
 
-    // === 환불 === //
-    private String cancelReason;
-    private BigDecimal cancelAmount; // 취소금액
-    private Integer cancelledAt; // 취소일시
+    // === 취소(환불) === //
+    @Embedded
+    private CancelInfo cancelInfo;
 }

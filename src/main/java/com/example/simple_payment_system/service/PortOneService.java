@@ -1,7 +1,7 @@
 package com.example.simple_payment_system.service;
 
 import com.example.simple_payment_system.common.PaymentToken;
-import com.example.simple_payment_system.dto.Response;
+import com.example.simple_payment_system.dto.portone.PortOnePaymentResponse;
 import java.math.BigDecimal;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +30,7 @@ public class PortOneService {
             .map(response -> (String) ((Map) response.get("response")).get("access_token"));
     }
 
-    protected Response getPayment(String impUid, String accessToken) {
+    protected PortOnePaymentResponse getPayment(String impUid, String accessToken) {
         String paymentUrl = "https://api.iamport.kr/payments/" + impUid;
         return webClient.get()
             .uri(paymentUrl)
@@ -44,13 +44,14 @@ public class PortOneService {
                 status -> status.is4xxClientError(),
                 clientResponse -> Mono.error(new RuntimeException("PortOne : Client error occurred"))
             )
-            .bodyToMono(Response.class)
+            .bodyToMono(PortOnePaymentResponse.class)
             .blockOptional()
             .orElseThrow(() -> new RuntimeException("PortOne : valid payment not found"));
 
     }
 
-    public Response canclePayment(String impUid, BigDecimal cancelRequestAmount, String reason, String accessToken) {
+    public PortOnePaymentResponse cancelPayment(String impUid, BigDecimal cancelRequestAmount, String reason,
+                                                String accessToken) {
         String cancelUrl = "https://api.iamport.kr/payments/cancel";
         Map<String, Object> requestData = Map.of(
             "reason", reason,
@@ -59,7 +60,7 @@ public class PortOneService {
             "checksum", cancelRequestAmount // Assuming cancelableAmount is the same as cancelRequestAmount
         );
 
-        webClient.post()
+        return webClient.post()
             .uri(cancelUrl)
             .header(HttpHeaders.AUTHORIZATION, accessToken)
             .contentType(MediaType.APPLICATION_JSON)
@@ -73,9 +74,8 @@ public class PortOneService {
                 status -> status.is4xxClientError(),
                 clientResponse -> Mono.error(new RuntimeException("PortOne : Client error occurred"))
             )
-            .bodyToMono(Response.class)
+            .bodyToMono(PortOnePaymentResponse.class)
             .blockOptional()
             .orElseThrow(() -> new RuntimeException("PortOne : cancel payment failed"));
-
     }
 }

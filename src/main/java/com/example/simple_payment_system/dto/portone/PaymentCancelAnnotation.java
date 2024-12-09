@@ -1,4 +1,4 @@
-package com.example.simple_payment_system.dto;
+package com.example.simple_payment_system.dto.portone;
 
 import java.math.BigDecimal;
 import lombok.Data;

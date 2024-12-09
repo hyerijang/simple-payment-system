@@ -20,7 +20,13 @@
         </tr>
         <tr>
             <td>지불 방식:</td>
-            <td><input id="payMethod" value="card"></td>
+            <td>
+                <select id="payMethod">
+                    <option value="card">카드</option>
+                    <option value="vbank">가상 계좌</option>
+                    <option value="naverpay">네이버 페이</option>
+                </select>
+            </td>
         </tr>
         <tr>
             <td>상품명:</td>
@@ -54,61 +60,27 @@
         </tr>
     </table>
 </form>
-<button onclick="requestSave()">주문서 저장</button>
 
 <button onclick="requestPay()">결제 하기</button>
 
 <script>
 
-    //merchant_uid 생성
-    const merchantUid = `${crypto.randomUUID()}`;
-    document.getElementById('merchantUid').value = merchantUid;
-
     // === 결제 요청 함수 ===
     function requestPay() {
-        IMP.init('imp15046061'); // 가맹점 식별코드
-
-        const form = document.getElementById('paymentForm');
-        IMP.request_pay(
-            {
-                channelKey: form.channelKey.value,
-                pay_method: form.payMethod.value,
-                merchant_uid: form.merchantUid.value,
-                name: form.name.value,
-                amount: form.amount.value,
-                buyer_email: form.buyerEmail.value,
-                buyer_name: form.buyerName.value,
-                buyer_tel: form.buyerTel.value,
-                buyer_addr: form.buyerAddr.value,
-                buyer_postcode: form.buyerPostcode.value,
-                m_redirect_url: form.mRedirectUrl.value,
-            },
-            async (response) => {
-                if (response.error_code != null) {
-                    return alert(`결제에 실패하였습니다. 에러 내용: ${response.error_msg}`);
-                }
-
-                console.log(response);
-                // 고객사 서버에서 엔드포인트를 구현해야 합니다.
-                const SERVER_BASE_URL = "http://localhost:8080"; // FIXME
-                const notified = await fetch(`${SERVER_BASE_URL}/api/v1/payment/complete`, {
-                    method: "POST",
-                    headers: {"Content-Type": "application/json"},
-                    // imp_uid와 merchant_uid, 주문 정보를 서버에 전달합니다
-                    body: JSON.stringify({
-                        imp_uid: response.imp_uid,
-                        merchant_uid: response.merchant_uid,
-                        // 주문 정보...
-                    }),
-                });
-            },
-        );
+        const merchantUid = generateMerchantUid();
+        saveOrder(merchantUid);
+        initiatePayment(merchantUid);
     }
 
-    function requestSave() {
-        const form = document.getElementById('paymentForm');
-        const merchantUid = form.merchantUid.value;
+    function generateMerchantUid() {
+        const merchantUid = `${crypto.randomUUID()}`;
+        document.getElementById('merchantUid').value = merchantUid;
+        return merchantUid;
+    }
 
+    function saveOrder(merchantUid) {
+        // 주문서 저장
+        const form = document.getElementById('paymentForm');
         const SERVER_BASE_URL = "http://localhost:8080"; // FIXME
         fetch(`${SERVER_BASE_URL}/api/v1/payment-order`, {
             method: "POST",
@@ -122,6 +94,56 @@
             }),
         });
     }
+
+
+    function initiatePayment(merchantUid) {
+        // 포트원 결제 요청
+        IMP.init('imp15046061'); // 가맹점 식별코드
+        const form = document.getElementById('paymentForm');
+
+        IMP.request_pay(
+            {
+                channelKey: form.channelKey.value,
+                pay_method: form.payMethod.value,
+                merchant_uid: merchantUid,
+                name: form.name.value,
+                amount: form.amount.value,
+                buyer_email: form.buyerEmail.value,
+                buyer_name: form.buyerName.value,
+                buyer_tel: form.buyerTel.value,
+                buyer_addr: form.buyerAddr.value,
+                buyer_postcode: form.buyerPostcode.value,
+                m_redirect_url: form.mRedirectUrl.value,
+                notice_url: "https://162f-39-120-97-60.ngrok-free.app"// 웹훅 수신 URL
+            },
+            async (portOnePaymentResponse) => {
+                if (portOnePaymentResponse.error_code != null) {
+                    return alert(`결제에 실패하였습니다. 에러 내용: ${portOnePaymentResponse.error_msg}`);
+                }
+
+                if (portOnePaymentResponse.status.toLowerCase() == "paid")
+                    alert("결제가 완료되었습니다.");
+                if (portOnePaymentResponse.status.toLowerCase() == "ready")
+                    alert("가상 계좌 발급이 완료되었습니다.");
+                else
+                    alert("결제가 완료되지 않았습니다. 상태: " + portOnePaymentResponse.status);
+
+                // 고객사 서버에 결제 결과 저장
+                const SERVER_BASE_URL = "http://localhost:8080"; // FIXME
+                const notified = await fetch(`${SERVER_BASE_URL}/api/v1/payment/complete`, {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    // imp_uid와 merchant_uid, 주문 정보를 서버에 전달합니다
+                    body: JSON.stringify({
+                        imp_uid: portOnePaymentResponse.imp_uid,
+                        merchant_uid: portOnePaymentResponse.merchant_uid,
+                        // 주문 정보...
+                    }),
+                });
+            },
+        );
+    }
+
 </script>
 </body>
 </html>

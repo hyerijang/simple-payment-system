@@ -3,7 +3,10 @@ package com.example.simple_payment_system.service;
 import com.example.simple_payment_system.PaymentOrderRepository;
 import com.example.simple_payment_system.domain.payment.order.PaymentOrder;
 import com.example.simple_payment_system.domain.payment.order.PaymentOrderStatus;
+import com.example.simple_payment_system.dto.PaymentOrderResponse;
 import com.example.simple_payment_system.dto.PaymentOrderSaveRequest;
+import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,5 +35,12 @@ public class PaymentOrderService {
         paymentOrderRepository.save(paymentOrder);
 
         return paymentOrder.getMerchantUid();
+    }
+
+    public List<PaymentOrderResponse> getAllOrders() {
+        return paymentOrderRepository.findAll().stream()
+            .map(order -> new PaymentOrderResponse(order.getMerchantUid(), order.getName(), order.getAmount(),
+                order.getBuyerId(), order.getPayMethod()))
+            .collect(Collectors.toList());
     }
 }
