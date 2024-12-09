@@ -5,6 +5,8 @@ import com.example.simple_payment_system.domain.payment.order.PaymentOrder;
 import com.example.simple_payment_system.domain.payment.order.PaymentOrderStatus;
 import com.example.simple_payment_system.dto.PaymentOrderResponse;
 import com.example.simple_payment_system.dto.PaymentOrderSaveRequest;
+import com.example.simple_payment_system.exception.CustomApiException;
+import com.example.simple_payment_system.exception.ExceptionEnum;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +20,8 @@ public class PaymentOrderService {
 
     public PaymentOrder findByMerchantUid(String merchantUid) {
         return paymentOrderRepository.findByMerchantUid(merchantUid)
-            .orElseThrow(() -> new IllegalArgumentException("주문이 존재하지 않습니다. merchantUid = " + merchantUid));
+            .orElseThrow(
+                () -> new CustomApiException(ExceptionEnum.BAD_REQUEST, "주문이 존재하지 않습니다. merchantUid = " + merchantUid));
     }
 
     public String create(PaymentOrderSaveRequest request) {

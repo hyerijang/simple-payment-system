@@ -8,11 +8,14 @@ import com.example.simple_payment_system.dto.PaymentOrderCancelRequest;
 import com.example.simple_payment_system.dto.PaymentOrderUpdateRequest;
 import com.example.simple_payment_system.dto.PaymentWebhookRequest;
 import com.example.simple_payment_system.dto.portone.PortOnePaymentResponse;
+import com.example.simple_payment_system.exception.CustomApiException;
+import com.example.simple_payment_system.exception.ExceptionEnum;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import static com.example.simple_payment_system.exception.ExceptionEnum.*;
 
 
 @Slf4j
@@ -25,16 +28,10 @@ public class PaymentService {
 
     @Transactional
     public void complete(PaymentOrderUpdateRequest result) {
-        try {
-            verifyPayment(result.getImpUid(), result.getMerchantUid());
-        } catch (Exception e) {
-            // 결제 검증에 실패했습니다.
-            log.error("결제 검증 실패 merchantUid = {} , {}", result.getMerchantUid(), e);
-            throw new RuntimeException("Payment verification failed");
-        }
+        processPayment(result.getImpUid(), result.getMerchantUid());
     }
 
-    private void verifyPayment(String impUid, String merchantUid) {
+    private void processPayment(String impUid, String merchantUid) {
 
         // 1. 포트원 API 엑세스 토큰 발급
         String accessToken = portOneService.getAccessToken().block();
@@ -42,16 +39,21 @@ public class PaymentService {
         // 2. 포트원 결제내역 단건조회 API 호출
         PortOnePaymentResponse payment = portOneService.getPayment(impUid, accessToken);
 
-        // 3. 고객사 내부 주문 데이터의 가격과 실제 지불된 금액을 비교합니다.
+        // 3. 고객사 내부 주문 데이터의 가격과 실제 지불된 금액을 비교하여 검증
         PaymentOrder paymentOrder = paymentOrderService.findByMerchantUid(merchantUid);
         BigDecimal amount = payment.getResponse().getAmount(); // 실제 결제 된 금액
         BigDecimal amountToBePaid = paymentOrder.getAmount(); // 결제 되어야하는 금액
+        verifyPayment(merchantUid, amount, amountToBePaid, payment, paymentOrder);
+    }
+
+    private void verifyPayment(String merchantUid, BigDecimal amount, BigDecimal amountToBePaid,
+                               PortOnePaymentResponse payment, PaymentOrder paymentOrder) {
         if (isAmountEqual(amount, amountToBePaid)) {
             handlePaymentStatus(payment, paymentOrder);
         } else {
             log.warn("결제 금액 불일치 merchantUid = {} , amount = {} , amountToBePaid = {}", merchantUid, amount,
                 amountToBePaid);
-            throw new RuntimeException("위조된 결제 시도");
+            throw new CustomApiException(ExceptionEnum.VALID_FAILED, "결제 금액 불일치");
         }
     }
 
@@ -79,9 +81,10 @@ public class PaymentService {
                 break;
             default:
                 // 결제가 실패했습니다. 원인을 파악하여 처리하세요.
-                log.warn("결제 실패 merchantUid = {}", merchantUid);
+                String errorMessage = String.format("결제 실패 (merchantUid = %s, status = %s)", merchantUid, status);
+                log.warn(errorMessage);
                 paymentOrder.setStatus(PaymentOrderStatus.FAILED);
-                throw new RuntimeException("Payment failed");
+                throw new CustomApiException(PORT_ONE_REQUEST_FAILED, errorMessage);
         }
     }
 
@@ -112,11 +115,11 @@ public class PaymentService {
     @Transactional
     public void portoneWebhook(PaymentWebhookRequest request) {
         try {
-            verifyPayment(request.getImpUid(), request.getMerchantUid());
+            processPayment(request.getImpUid(), request.getMerchantUid());
         } catch (Exception e) {
             // 결제 검증에 실패했습니다.
-            log.error("결제 검증 실패 merchantUid = {} , {}", request.getMerchantUid(), e);
-            throw new RuntimeException("Payment verification failed", e);
+            log.error("portoneWebhook 결제 검증 실패 merchantUid = {} , {}", request.getMerchantUid(), e);
+            throw new CustomApiException(PAYMENT_WEBHOOK_FAILED, "웹훅 결제 처리 실패");
         }
     }
 
@@ -129,7 +132,7 @@ public class PaymentService {
         PaymentOrder paymentOrder = paymentOrderService.findByMerchantUid(request.getMerchantUid());
         BigDecimal cancelableAmount = paymentOrder.getAmount().subtract(request.getCancelRequestAmount());
         if (cancelableAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new RuntimeException("이미 전액환불된 주문입니다.");
+            throw new CustomApiException(ExceptionEnum.DUPLICATE_PAYMENT_CANCEL_REQUEST, "이미 전액환불된 주문입니다.");
         }
         // 3. 포트원 REST API로 결제환불 요청
         PortOnePaymentResponse portOnePaymentResponse =
@@ -146,7 +149,7 @@ public class PaymentService {
                 .build();
             paymentOrder.setCancelInfo(cancelInfo);
         } else {
-            throw new RuntimeException("Payment cancel failed");
+            throw new CustomApiException(INTERNAL_SERVER_ERROR, "결제 취소(환불)결과 DB 저장 실패");
         }
 
     }

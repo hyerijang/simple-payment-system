@@ -2,6 +2,8 @@ package com.example.simple_payment_system.service;
 
 import com.example.simple_payment_system.common.PaymentToken;
 import com.example.simple_payment_system.dto.portone.PortOnePaymentResponse;
+import com.example.simple_payment_system.exception.CustomApiException;
+import com.example.simple_payment_system.exception.ExceptionEnum;
 import java.math.BigDecimal;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -38,15 +40,18 @@ public class PortOneService {
             .retrieve()
             .onStatus(
                 status -> status.is5xxServerError(),
-                clientResponse -> Mono.error(new RuntimeException("PortOne : Server error occurred"))
+                clientResponse -> Mono.error(
+                    new CustomApiException(ExceptionEnum.PORT_ONE_API_EXCEPTION, "PortOne : Server error occurred"))
             )
             .onStatus(
                 status -> status.is4xxClientError(),
-                clientResponse -> Mono.error(new RuntimeException("PortOne : Client error occurred"))
+                clientResponse -> Mono.error(
+                    new CustomApiException(ExceptionEnum.BAD_REQUEST, "PortOne : Client error occurred"))
             )
             .bodyToMono(PortOnePaymentResponse.class)
             .blockOptional()
-            .orElseThrow(() -> new RuntimeException("PortOne : valid payment not found"));
+            .orElseThrow(
+                () -> new CustomApiException(ExceptionEnum.PORT_ONE_NOT_FOUND, "PortOne : valid payment not found"));
 
     }
 
@@ -68,14 +73,17 @@ public class PortOneService {
             .retrieve()
             .onStatus(
                 status -> status.is5xxServerError(),
-                clientResponse -> Mono.error(new RuntimeException("PortOne : Server error occurred"))
+                clientResponse -> Mono.error(
+                    new CustomApiException(ExceptionEnum.PORT_ONE_API_EXCEPTION, "PortOne : Server error occurred"))
             )
             .onStatus(
                 status -> status.is4xxClientError(),
-                clientResponse -> Mono.error(new RuntimeException("PortOne : Client error occurred"))
+                clientResponse -> Mono.error(
+                    new CustomApiException(ExceptionEnum.BAD_REQUEST, "PortOne : Client error occurred"))
             )
             .bodyToMono(PortOnePaymentResponse.class)
             .blockOptional()
-            .orElseThrow(() -> new RuntimeException("PortOne : cancel payment failed"));
+            .orElseThrow(
+                () -> new CustomApiException(ExceptionEnum.PORT_ONE_NOT_FOUND, "PortOne : valid payment not found"));
     }
 }
