@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko-KR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Home</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="container">
+    <h1>Welcome to the Simple Payment System</h1>
+    <p>This is the home page.</p>
+    <nav>
+        <ul>
+            <h2>고객 페이지</h2>
+            <li><a th:href="@{/payment}">주문하기</a></li>
+            <h2>관리자 페이지</h2>
+            <li><a th:href="@{/payment-order}">주문서 관리</a></li>
+        </ul>
+    </nav>
+</div>
+</body>
+</html>

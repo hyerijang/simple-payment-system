@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko-KR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Payment Order Management</title>
+    <link rel="stylesheet" th:href="@{/css/styles.css}">
+</head>
+<body>
+<div class="container">
+    <h1>Payment Order Management</h1>
+
+    <h2>Payment Orders</h2>
+    <table id="ordersTable" class="table">
+        <thead>
+        <tr>
+            <th>Merchant UID</th>
+            <th>Name</th>
+            <th>Amount</th>
+            <th>Buyer ID</th>
+            <th>Pay Method</th>
+        </tr>
+        </thead>
+        <tbody>
+
+        <tr th:each="order : ${orders}">
+            <td th:text="${order.merchantUid}"></td>
+            <td th:text="${order.name}"></td>
+            <td th:text="${order.amount}"></td>
+            <td th:text="${order.buyerId}"></td>
+            <td th:text="${order.payMethod}"></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>
