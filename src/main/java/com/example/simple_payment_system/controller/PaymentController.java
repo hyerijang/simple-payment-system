@@ -26,6 +26,12 @@ public class PaymentController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/api/v1/payment/complete-async1")
+    public ResponseEntity<Void> completeAsync1(@RequestBody PaymentOrderUpdateRequest paymentOrderUpdateRequest) {
+        paymentService.completeAsync1(paymentOrderUpdateRequest);
+        return ResponseEntity.ok().build();
+    }
+
     // 웹훅 처리
     @PostMapping("/api/v1/portone-webhook")
     public ResponseEntity<Void> portoneWebhook(@RequestBody PaymentWebhookRequest webhookRequest) {

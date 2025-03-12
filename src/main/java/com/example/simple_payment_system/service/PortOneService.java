@@ -55,6 +55,24 @@ public class PortOneService {
 
     }
 
+    protected Mono<PortOnePaymentResponse> getPaymentMono(String impUid, String accessToken) {
+        String paymentUrl = "https://api.iamport.kr/payments/" + impUid;
+        return webClient.get()
+            .uri(paymentUrl)
+            .header(HttpHeaders.AUTHORIZATION, accessToken)
+            .retrieve()
+            .onStatus(
+                status -> status.is5xxServerError(),
+                clientResponse -> Mono.error(
+                    new CustomApiException(ExceptionEnum.PORT_ONE_API_EXCEPTION, "PortOne : Server error occurred"))
+            )
+            .onStatus(
+                status -> status.is4xxClientError(),
+                clientResponse -> Mono.error(
+                    new CustomApiException(ExceptionEnum.BAD_REQUEST, "PortOne : Client error occurred"))
+            ).bodyToMono(PortOnePaymentResponse.class);
+    }
+
     public PortOnePaymentResponse cancelPayment(String impUid, BigDecimal cancelRequestAmount, String reason,
                                                 String accessToken) {
         String cancelUrl = "https://api.iamport.kr/payments/cancel";
