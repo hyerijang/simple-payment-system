@@ -25,6 +25,11 @@ public class AdminContloler {
         return "payment";
     }
 
+    @GetMapping("/payment-async1")
+    public String paymentAsync1() {
+        return "payment_async1";
+    }
+
     @GetMapping("/payment-order")
     public String paymentOrder(Model model) {
         List<PaymentOrderResponse> orders = paymentOrderService.getAllOrders();

@@ -1,5 +1,6 @@
 package com.example.simple_payment_system.service;
 
+import static com.example.simple_payment_system.exception.ExceptionEnum.*;
 import com.example.simple_payment_system.domain.payment.order.CancelInfo;
 import com.example.simple_payment_system.domain.payment.order.PaymentOrder;
 import com.example.simple_payment_system.domain.payment.order.PaymentOrderStatus;
@@ -15,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import static com.example.simple_payment_system.exception.ExceptionEnum.*;
+import reactor.core.publisher.Mono;
 
 
 @Slf4j
@@ -26,24 +27,27 @@ public class PaymentService {
     private final PaymentOrderService paymentOrderService;
     private final PortOneService portOneService;
 
+
     @Transactional
     public void complete(PaymentOrderUpdateRequest result) {
         processPayment(result.getImpUid(), result.getMerchantUid());
     }
 
     private void processPayment(String impUid, String merchantUid) {
-
         // 1. 포트원 API 엑세스 토큰 발급
-        String accessToken = portOneService.getAccessToken().block();
+        Mono<String> accessTokenMono = portOneService.getAccessToken();
 
         // 2. 포트원 결제내역 단건조회 API 호출
-        PortOnePaymentResponse payment = portOneService.getPayment(impUid, accessToken);
-
-        // 3. 고객사 내부 주문 데이터의 가격과 실제 지불된 금액을 비교하여 검증
-        PaymentOrder paymentOrder = paymentOrderService.findByMerchantUid(merchantUid);
-        BigDecimal amount = payment.getResponse().getAmount(); // 실제 결제 된 금액
-        BigDecimal amountToBePaid = paymentOrder.getAmount(); // 결제 되어야하는 금액
-        verifyPayment(merchantUid, amount, amountToBePaid, payment, paymentOrder);
+        accessTokenMono.flatMap(accessToken -> portOneService.getPaymentMono(impUid, accessToken)).flatMap(payment -> {
+                // 3. 고객사 내부 주문 데이터의 가격과 실제 지불된 금액을 비교하여 검증
+                PaymentOrder paymentOrder = paymentOrderService.findByMerchantUid(merchantUid);
+                BigDecimal amount = payment.getResponse().getAmount(); // 실제 결제 된 금액
+                BigDecimal amountToBePaid = paymentOrder.getAmount(); // 결제 되어야하는 금액
+                verifyPayment(merchantUid, amount, amountToBePaid, payment, paymentOrder);
+                return Mono.empty();
+            })
+            .doOnTerminate(() -> log.info("[결제 결과 처리 완료] merchantUid = {}", merchantUid))
+            .subscribe();
     }
 
     private void verifyPayment(String merchantUid, BigDecimal amount, BigDecimal amountToBePaid,
